@@ -46,12 +46,6 @@
               <el-icon><Menu /></el-icon>
             </el-button>
             
-<<<<<<< HEAD
-=======
-            <!-- 通知铃铛 -->
-            <NotificationBell />
-            
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
             <el-dropdown @command="handleCommand" class="user-dropdown">
               <span class="user-info">
                 <el-avatar :size="32" :src="userAvatar">
@@ -66,13 +60,6 @@
                     <el-icon><User /></el-icon>
                     个人资料
                   </el-dropdown-item>
-<<<<<<< HEAD
-=======
-                  <el-dropdown-item command="notifications">
-                    <el-icon><Bell /></el-icon>
-                    消息通知
-                  </el-dropdown-item>
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
                   <el-dropdown-item command="settings">
                     <el-icon><Setting /></el-icon>
                     设置
@@ -143,13 +130,6 @@
             <el-icon><Folder /></el-icon>
             <span>我的作品</span>
           </el-menu-item>
-<<<<<<< HEAD
-=======
-          <el-menu-item index="/notifications">
-            <el-icon><Bell /></el-icon>
-            <span>消息通知</span>
-          </el-menu-item>
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
         </el-menu>
         
         <div class="mobile-menu-footer">
@@ -176,10 +156,6 @@ import { computed, watch, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from './stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-<<<<<<< HEAD
-=======
-import NotificationBell from './components/NotificationBell.vue'
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
 import {
   MagicStick,
   House,
@@ -189,21 +165,12 @@ import {
   Setting,
   SwitchButton,
   ArrowDown,
-<<<<<<< HEAD
   Menu
-=======
-  Menu,
-  Bell
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
 } from '@element-plus/icons-vue'
 
 export default {
   name: 'App',
   components: {
-<<<<<<< HEAD
-=======
-    NotificationBell,
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
     MagicStick,
     House,
     Picture,
@@ -212,12 +179,7 @@ export default {
     Setting,
     SwitchButton,
     ArrowDown,
-<<<<<<< HEAD
     Menu
-=======
-    Menu,
-    Bell
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
   },
   setup() {
     const router = useRouter()
@@ -257,12 +219,6 @@ export default {
         case 'profile':
           router.push('/profile')
           break
-<<<<<<< HEAD
-=======
-        case 'notifications':
-          router.push('/notifications')
-          break
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
         case 'settings':
           ElMessage.info('设置功能开发中...')
           break

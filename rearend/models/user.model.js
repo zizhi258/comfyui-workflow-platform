@@ -86,15 +86,6 @@ User.associate = (models) => {
     otherKey: 'workId',
     as: 'likedWorks'
   });
-<<<<<<< HEAD
-=======
-  
-  // 用户拥有多个通知
-  User.hasMany(models.Notification, {
-    foreignKey: 'userId',
-    as: 'notifications'
-  });
->>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
 };
 
 module.exports = User;
