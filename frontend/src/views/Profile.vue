@@ -217,52 +217,6 @@
             </el-card>
           </el-tab-pane>
 
-          <!-- 通知设置 -->
-          <el-tab-pane label="通知设置" name="notifications">
-            <el-card class="setting-card">
-              <template #header>
-                <span>通知偏好</span>
-              </template>
-              
-              <div class="notification-settings">
-                <div class="setting-group">
-                  <h4>邮件通知</h4>
-                  <div class="setting-item">
-                    <span>新的点赞和评论</span>
-                    <el-switch v-model="notificationSettings.email.likes" />
-                  </div>
-                  <div class="setting-item">
-                    <span>新的关注者</span>
-                    <el-switch v-model="notificationSettings.email.followers" />
-                  </div>
-                  <div class="setting-item">
-                    <span>系统公告</span>
-                    <el-switch v-model="notificationSettings.email.announcements" />
-                  </div>
-                </div>
-                
-                <div class="setting-group">
-                  <h4>站内通知</h4>
-                  <div class="setting-item">
-                    <span>新的点赞和评论</span>
-                    <el-switch v-model="notificationSettings.push.likes" />
-                  </div>
-                  <div class="setting-item">
-                    <span>新的关注者</span>
-                    <el-switch v-model="notificationSettings.push.followers" />
-                  </div>
-                  <div class="setting-item">
-                    <span>作品生成完成</span>
-                    <el-switch v-model="notificationSettings.push.workComplete" />
-                  </div>
-                </div>
-
-                <el-button type="primary" @click="saveNotificationSettings" style="margin-top: 1rem;">
-                  保存设置
-                </el-button>
-              </div>
-            </el-card>
-          </el-tab-pane>
         </el-tabs>
       </div>
     </div>
@@ -361,19 +315,6 @@ export default {
       emailNotifications: true
     })
 
-    // 通知设置
-    const notificationSettings = reactive({
-      email: {
-        likes: true,
-        followers: true,
-        announcements: true
-      },
-      push: {
-        likes: true,
-        followers: true,
-        workComplete: true
-      }
-    })
 
     // 表单验证规则
     const basicRules = reactive({
@@ -506,16 +447,6 @@ export default {
       }
     }
 
-    const saveNotificationSettings = async () => {
-      try {
-        // 这里应该调用API保存通知设置
-        // await userAPI.updateNotificationSettings(notificationSettings)
-        
-        ElMessage.success('通知设置保存成功')
-      } catch (error) {
-        ElMessage.error('保存失败')
-      }
-    }
 
     const beforeAvatarUpload = (file) => {
       const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
@@ -627,7 +558,6 @@ export default {
       basicForm,
       passwordForm,
       privacySettings,
-      notificationSettings,
       basicRules,
       passwordRules,
       userAvatar,
@@ -636,7 +566,6 @@ export default {
       saveBasicInfo,
       changePassword,
       savePrivacySettings,
-      saveNotificationSettings,
       beforeAvatarUpload,
       uploadAvatar,
       saveAvatar,

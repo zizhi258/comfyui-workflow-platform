@@ -46,9 +46,6 @@
               <el-icon><Menu /></el-icon>
             </el-button>
             
-            <!-- 通知铃铛 -->
-            <NotificationBell />
-            
             <el-dropdown @command="handleCommand" class="user-dropdown">
               <span class="user-info">
                 <el-avatar :size="32" :src="userAvatar">
@@ -62,10 +59,6 @@
                   <el-dropdown-item command="profile">
                     <el-icon><User /></el-icon>
                     个人资料
-                  </el-dropdown-item>
-                  <el-dropdown-item command="notifications">
-                    <el-icon><Bell /></el-icon>
-                    消息通知
                   </el-dropdown-item>
                   <el-dropdown-item command="settings">
                     <el-icon><Setting /></el-icon>
@@ -137,10 +130,6 @@
             <el-icon><Folder /></el-icon>
             <span>我的作品</span>
           </el-menu-item>
-          <el-menu-item index="/notifications">
-            <el-icon><Bell /></el-icon>
-            <span>消息通知</span>
-          </el-menu-item>
         </el-menu>
         
         <div class="mobile-menu-footer">
@@ -167,7 +156,6 @@ import { computed, watch, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from './stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import NotificationBell from './components/NotificationBell.vue'
 import {
   MagicStick,
   House,
@@ -177,14 +165,12 @@ import {
   Setting,
   SwitchButton,
   ArrowDown,
-  Menu,
-  Bell
+  Menu
 } from '@element-plus/icons-vue'
 
 export default {
   name: 'App',
   components: {
-    NotificationBell,
     MagicStick,
     House,
     Picture,
@@ -193,8 +179,7 @@ export default {
     Setting,
     SwitchButton,
     ArrowDown,
-    Menu,
-    Bell
+    Menu
   },
   setup() {
     const router = useRouter()
@@ -233,9 +218,6 @@ export default {
       switch (command) {
         case 'profile':
           router.push('/profile')
-          break
-        case 'notifications':
-          router.push('/notifications')
           break
         case 'settings':
           ElMessage.info('设置功能开发中...')
