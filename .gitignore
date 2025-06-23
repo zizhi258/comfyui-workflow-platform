@@ -2,3 +2,4 @@
 /node_modules
 /frontend/node_modules
 /rearend/node_modules
+.claude/settings.local.json
