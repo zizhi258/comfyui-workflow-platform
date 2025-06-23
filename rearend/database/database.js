@@ -28,8 +28,14 @@ const initModels = () => {
   const User = require('../models/user.model');
   const Work = require('../models/work.model');
   const UserWorkLike = require('../models/userWorkLike.model');
+<<<<<<< HEAD
   
   const models = { User, Work, UserWorkLike };
+=======
+  const Notification = require('../models/notification.model');
+  
+  const models = { User, Work, UserWorkLike, Notification };
+>>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
   
   // 执行关联
   Object.keys(models).forEach(modelName => {

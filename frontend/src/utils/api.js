@@ -74,5 +74,21 @@ export const worksAPI = {
   getUserStats: () => api.get('/works/stats')
 }
 
+<<<<<<< HEAD
+=======
+// 通知管理相关API
+export const notificationAPI = {
+  // 获取用户通知列表
+  getUserNotifications: (params) => api.get('/notifications', { params }),
+  // 获取未读通知数量
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  // 标记单个通知为已读
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  // 批量标记通知为已读
+  markBatchAsRead: (data) => api.put('/notifications/mark-read', data),
+  // 删除通知
+  deleteNotification: (id) => api.delete(`/notifications/${id}`)
+}
+>>>>>>> b6cd7a7f157d5af40adb52a9e9ad251315e466cd
 
 export default api
