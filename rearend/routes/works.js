@@ -9,7 +9,8 @@ const {
   updateWork,
   deleteWork,
   toggleWorkLike,
-  getUserStats
+  getUserStats,
+  incrementWorkView
 } = require('../controllers/worksController');
 
 // 保存作品到画廊（需要认证）
@@ -32,6 +33,9 @@ router.delete('/:id', authenticateToken, deleteWork);
 
 // 点赞/取消点赞作品（需要认证）
 router.post('/:id/like', authenticateToken, toggleWorkLike);
+
+// 增加作品浏览量（可选认证：支持匿名用户）
+router.post('/:id/view', optionalAuth, incrementWorkView);
 
 // 获取单个作品详情（可选认证：有token则获取用户点赞状态）
 router.get('/:id', optionalAuth, getWorkById);

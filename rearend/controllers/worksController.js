@@ -1,6 +1,7 @@
 const Work = require('../models/work.model');
 const User = require('../models/user.model');
 const UserWorkLike = require('../models/userWorkLike.model');
+const WorkView = require('../models/workView.model');
 const fileManager = require('../utils/fileManager');
 const { Op } = require('sequelize');
 
@@ -599,13 +600,22 @@ const getUserStats = async (req, res) => {
     // 获取用户所有作品的统计信息
     const works = await Work.findAll({
       where: { userId },
-      attributes: ['likes', 'views']
+      attributes: ['id', 'likes', 'views']
+    });
+
+    // 获取所有作品的浏览记录总数（更准确的浏览量统计）
+    const workIds = works.map(work => work.id);
+    const totalViewRecords = await WorkView.count({
+      where: {
+        workId: { [Op.in]: workIds }
+      }
     });
 
     const stats = {
       totalWorks: works.length,
       totalLikes: works.reduce((sum, work) => sum + (work.likes || 0), 0),
-      totalViews: works.reduce((sum, work) => sum + (work.views || 0), 0)
+      totalViews: works.reduce((sum, work) => sum + (work.views || 0), 0), // 使用作品表中的浏览量
+      // totalViewRecords: totalViewRecords // 如果需要更详细的浏览记录统计
     };
 
     console.log(`用户 ${userId} 的统计信息:`, stats);
@@ -620,6 +630,115 @@ const getUserStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '获取统计信息失败',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * 增加作品浏览量
+ * 支持用户和匿名访问，设置每分钟浏览量上限
+ */
+const incrementWorkView = async (req, res) => {
+  try {
+    const workId = parseInt(req.params.id);
+    const userId = req.user?.id; // 用户可能未登录
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
+    // 查找作品
+    const work = await Work.findByPk(workId);
+    if (!work) {
+      return res.status(404).json({
+        success: false,
+        message: '作品不存在'
+      });
+    }
+
+    // 检查作品是否公开（除非是作者本人）
+    if (!work.isPublic && work.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: '无权访问该作品'
+      });
+    }
+
+    // 如果是作者本人，不增加浏览量
+    if (work.userId === userId) {
+      return res.json({
+        success: true,
+        message: '作者本人访问，不增加浏览量',
+        data: {
+          workId: work.id,
+          views: work.views,
+          increased: false
+        }
+      });
+    }
+
+    // 检查浏览量限制（每分钟最多增加1次）
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    const recentViewQuery = {
+      workId: workId,
+      viewedAt: { [Op.gte]: oneMinuteAgo }
+    };
+
+    // 根据用户状态构建查询条件
+    if (userId) {
+      recentViewQuery.userId = userId;
+    } else {
+      recentViewQuery.userId = null;
+      recentViewQuery.ipAddress = ipAddress;
+    }
+
+    const recentView = await WorkView.findOne({
+      where: recentViewQuery,
+      order: [['viewedAt', 'DESC']]
+    });
+
+    if (recentView) {
+      return res.json({
+        success: true,
+        message: '浏览量增加过于频繁，请稍后再试',
+        data: {
+          workId: work.id,
+          views: work.views,
+          increased: false,
+          nextAllowedTime: new Date(recentView.viewedAt.getTime() + 60 * 1000)
+        }
+      });
+    }
+
+    // 记录浏览行为
+    await WorkView.create({
+      userId: userId,
+      workId: workId,
+      ipAddress: ipAddress,
+      userAgent: userAgent,
+      viewedAt: new Date()
+    });
+
+    // 增加作品浏览量
+    await work.increment('views');
+    await work.reload();
+
+    console.log(`${userId ? `用户 ${userId}` : `匿名用户 ${ipAddress}`} 浏览了作品 ${workId}`);
+
+    res.json({
+      success: true,
+      message: '浏览量增加成功',
+      data: {
+        workId: work.id,
+        views: work.views,
+        increased: true
+      }
+    });
+
+  } catch (error) {
+    console.error('增加浏览量失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '增加浏览量失败',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -685,5 +804,6 @@ module.exports = {
   updateWork,
   deleteWork,
   toggleWorkLike,
-  getUserStats
+  getUserStats,
+  incrementWorkView
 };

@@ -13,14 +13,13 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 
-
 // 使用中间件
 app.use(cors({
   origin: ['http://localhost:3000', 'http://127.0.0.1:3000'], // 允许前端域名
   credentials: true
 }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true }));//解析 application/x-www-form-urlencoded 请求体的中间件。
 
 // 配置静态文件服务，用于访问上传的头像
 // 例如: http://localhost:8000/uploads/avatars/user-1-1678886400000.png
@@ -33,9 +32,8 @@ app.use('/api/works', worksRoutes);
 
 // 定义一个根路由用于测试
 app.get('/', (req, res) => {
-  res.send('<h1>后端服务已启动 (MySQL + Sequelize)</h1><p>API 根路径为 /api</p>');
+  res.send('<h1>后端服务已启动 (Express + Sequelize + MySQL)</h1><p>API 根路径为 /api</p>');
 });
-
 
 
 

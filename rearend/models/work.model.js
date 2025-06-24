@@ -156,6 +156,12 @@ Work.associate = (models) => {
     otherKey: 'userId',
     as: 'likedByUsers'
   });
+  
+  // 作品有多个浏览记录
+  Work.hasMany(models.WorkView, {
+    foreignKey: 'workId',
+    as: 'viewRecords'
+  });
 };
 
 module.exports = Work;
