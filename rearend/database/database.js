@@ -35,8 +35,9 @@ const initModels = () => {
   const Work = require('../models/work.model');
   const UserWorkLike = require('../models/userWorkLike.model');
   const WorkView = require('../models/workView.model');
+  const CreditTransaction = require('../models/creditTransaction.model');
   
-  const models = { User, Work, UserWorkLike, WorkView };
+  const models = { User, Work, UserWorkLike, WorkView, CreditTransaction };
   
   // 执行关联，避免了循环依赖
   Object.keys(models).forEach(modelName => {

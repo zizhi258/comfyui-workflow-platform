@@ -464,9 +464,25 @@ export default {
       loadGallery()
     }
 
-    const openWorkDetail = (work) => {
+    const openWorkDetail = async (work) => {
       selectedWork.value = work
       detailVisible.value = true
+      
+      // 增加浏览量
+      try {
+        const response = await worksAPI.incrementWorkView(work.id)
+        if (response.success && response.data.increased) {
+          // 更新本地显示的浏览量
+          work.views = response.data.views
+          // 如果selectedWork是同一个作品，也更新它
+          if (selectedWork.value && selectedWork.value.id === work.id) {
+            selectedWork.value.views = response.data.views
+          }
+        }
+      } catch (error) {
+        // 浏览量增加失败时静默处理，不影响用户体验
+        console.warn('增加浏览量失败:', error)
+      }
     }
 
     const likeWork = async (work) => {

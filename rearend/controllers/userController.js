@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
 const User = require('../models/user.model');
+const CreditService = require('../services/creditService');
 
 // --- 辅助函数：格式化用户数据 ---
 const formatUserData = (user) => {
@@ -15,6 +16,7 @@ const formatUserData = (user) => {
     avatar: user.avatar ? `${process.env.BASE_URL}${user.avatar.replace('public', '')}` : null, // 生成完整的URL
     website: user.website,
     location: user.location,
+    credits: user.credits || 0, // 添加积分字段
     last_login: user.last_login,
     created_at: user.created_at,
     updated_at: user.updated_at,
@@ -229,5 +231,82 @@ exports.uploadAvatar = async (req, res) => {
   } catch (error) {
     console.error('上传头像失败:', error);
     res.status(500).json({ success: false, error: '服务器内部错误', code: 'SERVER_ERROR' });
+  }
+};
+
+// === 积分系统相关接口 ===
+
+// 获取用户积分余额
+exports.getCredits = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const credits = await CreditService.getUserCredits(userId);
+    
+    res.json({
+      success: true,
+      data: {
+        credits: credits
+      }
+    });
+  } catch (error) {
+    console.error('获取积分余额失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取积分余额失败'
+    });
+  }
+};
+
+// 获取用户积分统计信息
+exports.getCreditStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const stats = await CreditService.getUserCreditStats(userId);
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('获取积分统计失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取积分统计失败'
+    });
+  }
+};
+
+// 获取用户积分交易记录
+exports.getCreditTransactions = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      page = 1,
+      pageSize = 20,
+      type = null,
+      startDate = null,
+      endDate = null
+    } = req.query;
+
+    const options = {
+      page: parseInt(page),
+      pageSize: parseInt(pageSize),
+      type,
+      startDate: startDate ? new Date(startDate) : null,
+      endDate: endDate ? new Date(endDate) : null
+    };
+
+    const result = await CreditService.getUserTransactions(userId, options);
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('获取积分交易记录失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取积分交易记录失败'
+    });
   }
 };

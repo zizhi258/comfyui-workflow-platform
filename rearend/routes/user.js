@@ -20,4 +20,9 @@ router.put('/password', userController.updatePassword);
 // protect 先验证用户，然后 upload.single('avatar') 处理文件
 router.post('/avatar', upload.single('avatar'), userController.uploadAvatar);
 
+// === 积分系统路由 ===
+router.get('/credits', userController.getCredits);
+router.get('/credits/stats', userController.getCreditStats);
+router.get('/credits/transactions', userController.getCreditTransactions);
+
 module.exports = router;

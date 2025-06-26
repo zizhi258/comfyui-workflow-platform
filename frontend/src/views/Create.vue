@@ -180,14 +180,20 @@
             :loading="isGenerating"
             @click="generateImage"
             class="generate-btn"
-            :disabled="!config.prompt.trim()"
+            :disabled="!config.prompt.trim() || userStore.userCredits < estimatedCredits"
           >
             <el-icon v-if="!isGenerating"><MagicStick /></el-icon>
             {{ isGenerating ? '创作中...' : '开始创作' }}
           </el-button>
           <div class="cost-info">
             <el-icon><Coin /></el-icon>
-            预计消耗: {{ estimatedCost }} 积分
+            预计消耗: {{ estimatedCredits }} 积分
+          </div>
+          <div class="balance-info" :class="{ 'insufficient': userStore.userCredits < estimatedCredits }">
+            余额: {{ userStore.userCredits }} 积分
+            <span v-if="userStore.userCredits < estimatedCredits" class="insufficient-text">
+              (不足)
+            </span>
           </div>
         </div>
       </div>
@@ -215,7 +221,11 @@
               <el-icon size="64"><MagicStick /></el-icon>
             </div>
             <h4>AI正在创作中...</h4>
-            <p>请稍等，预计需要 {{ estimatedTime }} 秒</p>
+            <p>{{ progressDetail.title }}</p>
+            <p v-if="progressDetail.totalSteps > 0" class="progress-detail">
+              步骤 {{ progressDetail.step }} / {{ progressDetail.totalSteps }}
+            </p>
+            <p v-else>请稍等，预计需要 {{ estimatedTime }} 秒</p>
             <el-progress :percentage="generationProgress" :stroke-width="6" />
           </div>
 
@@ -364,10 +374,12 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { generateAPI, worksAPI } from '../utils/api'
 import { getFullImageUrl, handleImageError, downloadImage as downloadImageUtil } from '../utils/imageUtils'
+import progressWS from '../utils/websocket'
+import { useUserStore } from '../stores/user'
 import {
   MagicStick,
   Edit,
@@ -394,6 +406,9 @@ export default {
     Coin
   },
   setup() {
+    // 用户状态
+    const userStore = useUserStore()
+    
     // 配置数据
     const config = reactive({
       prompt: '',
@@ -411,6 +426,7 @@ export default {
     // 状态数据
     const isGenerating = ref(false)
     const generationProgress = ref(0)
+    const progressDetail = ref({ step: 0, totalSteps: 0, title: '准备中...' })
     const generatedImages = ref([])
     const previewVisible = ref(false)
     const previewImage = ref(null)
@@ -442,6 +458,11 @@ export default {
       const sizeCost = config.size === '1024x1024' ? 5 : 0
       const batchCost = (config.batchSize - 1) * 8
       return baseCost + sizeCost + batchCost
+    })
+
+    // 积分消耗计算
+    const estimatedCredits = computed(() => {
+      return 15 * config.batchSize // 每张图片15积分
     })
 
     const estimatedTime = computed(() => {
@@ -538,24 +559,65 @@ export default {
         return
       }
 
+      // 检查积分余额
+      if (userStore.userCredits < estimatedCredits.value) {
+        ElMessage.error(`积分不足！需要 ${estimatedCredits.value} 积分，当前余额 ${userStore.userCredits} 积分`)
+        return
+      }
+
       console.log('生成图片配置:', {
         model: config.model,
         sampler: config.sampler,
-        prompt: config.prompt.substring(0, 50) + '...'
+        prompt: config.prompt.substring(0, 50) + '...',
+        estimatedCredits: estimatedCredits.value
       })
 
       isGenerating.value = true
       generationProgress.value = 0
 
       try {
-        // 模拟进度更新
-        const progressInterval = setInterval(() => {
-          if (generationProgress.value < 90) {
-            generationProgress.value += Math.random() * 10
+        // 生成前端taskId，提前订阅
+        const frontendTaskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        console.log('🎲 生成前端taskId:', frontendTaskId)
+        
+        // 预先订阅进度更新
+        if (progressWS.getConnectionStatus().isConnected) {
+          console.log('🔔 预订阅WebSocket进度更新')
+          
+          const success = progressWS.subscribeProgress(frontendTaskId, (progressData) => {
+            console.log('📊 收到进度更新:', progressData)
+            
+            if (progressData.error || progressData.failed) {
+              console.error('❌ 任务失败:', progressData.error)
+              ElMessage.error(progressData.error || '生成失败')
+              generationProgress.value = 0
+            } else if (progressData.completed) {
+              console.log('✅ 任务完成')
+              generationProgress.value = 100
+            } else if (progressData.percent !== undefined) {
+              generationProgress.value = Math.min(progressData.percent, 99)
+              
+              // 更新详细进度信息
+              progressDetail.value = {
+                step: progressData.step || 0,
+                totalSteps: progressData.totalSteps || 0,
+                title: progressData.title || '生成中...'
+              }
+              
+              console.log(`🎯 生成进度: ${progressData.percent}% (${progressData.step}/${progressData.totalSteps})`)
+            }
+          })
+          
+          if (!success) {
+            console.warn('⚠️ WebSocket进度订阅失败，使用模拟进度')
+            startFallbackProgress()
           }
-        }, 500)
+        } else {
+          console.warn('⚠️ WebSocket未连接，使用模拟进度')
+          startFallbackProgress()
+        }
 
-        // 调用真实的API接口
+        // 调用真实的API接口，传递frontendTaskId
         console.log('开始调用生成API...')
         const response = await generateAPI.generateImage({
           prompt: config.prompt,
@@ -567,14 +629,17 @@ export default {
           steps: config.steps,
           seed: config.seed,
           sampler: config.sampler,
-          clipSkip: config.clipSkip
+          clipSkip: config.clipSkip,
+          frontendTaskId: frontendTaskId // 传递前端生成的taskId
         })
 
         console.log('API调用完成，收到响应:', response)
-        clearInterval(progressInterval)
-        generationProgress.value = 100
 
         if (response.success) {
+          // 只有在WebSocket未连接时才直接设置为100%
+          if (!progressWS.getConnectionStatus().isConnected) {
+            generationProgress.value = 100
+          }
           // 处理成功响应
           console.log('生成成功，处理图片数据:', response.data.images)
           generatedImages.value = response.data.images.map(img => ({
@@ -592,6 +657,12 @@ export default {
           
           console.log('前端图片数据更新完成:', generatedImages.value)
           
+          // 更新用户积分余额
+          if (response.data.creditsRemaining !== null) {
+            userStore.updateCredits(response.data.creditsRemaining)
+            console.log('积分余额已更新:', response.data.creditsRemaining)
+          }
+          
           // 调试：打印图片URL信息
           generatedImages.value.forEach((img, index) => {
             console.log(`图片 ${index + 1}:`, {
@@ -602,18 +673,32 @@ export default {
               storageType: img.storageType
             });
           });
-          ElMessage.success(`创作完成！消耗 ${response.data.cost} 积分`)
+          
+          const creditsUsed = response.data.creditsUsed || estimatedCredits.value
+          ElMessage.success(`创作完成！消耗 ${creditsUsed} 积分，余额 ${response.data.creditsRemaining || userStore.userCredits} 积分`)
         } else {
           console.error('API返回失败:', response)
           throw new Error(response.message || '生成失败')
         }
 
       } catch (error) {
-        ElMessage.error(error.message || '生成失败，请重试')
         console.error('Generation error:', error)
+        
+        // 处理特定的错误类型
+        if (error.response && error.response.status === 402) {
+          // 积分不足错误
+          const errorData = error.response.data
+          ElMessage.error(`积分不足！需要 ${errorData.data?.requiredCredits || estimatedCredits.value} 积分，当前余额 ${errorData.data?.currentCredits || userStore.userCredits} 积分`)
+          
+          // 刷新用户积分信息
+          userStore.refreshCredits()
+        } else {
+          ElMessage.error(error.message || '生成失败，请重试')
+        }
       } finally {
         isGenerating.value = false
         generationProgress.value = 0
+        progressDetail.value = { step: 0, totalSteps: 0, title: '准备中...' }
       }
     }
 
@@ -792,16 +877,43 @@ export default {
       return new Date(time).toLocaleTimeString('zh-CN')
     }
 
+    // 模拟进度更新（WebSocket失败时的回退方案）
+    const startFallbackProgress = () => {
+      const progressInterval = setInterval(() => {
+        if (generationProgress.value < 90) {
+          generationProgress.value += Math.random() * 8
+        }
+      }, 800)
+      
+      // 保存interval引用以便清理
+      return progressInterval
+    }
+
     // 组件挂载时获取模型和采样器列表
-    onMounted(() => {
+    onMounted(async () => {
       fetchAvailableModels()
       fetchAvailableSamplers()
+      
+      // 初始化WebSocket连接
+      try {
+        await progressWS.connect()
+        console.log('✅ WebSocket连接初始化成功')
+      } catch (error) {
+        console.warn('⚠️ WebSocket连接失败，将使用模拟进度:', error)
+      }
+    })
+    
+    // 组件卸载时清理WebSocket连接
+    onUnmounted(() => {
+      progressWS.disconnect()
     })
 
     return {
+      userStore,
       config,
       isGenerating,
       generationProgress,
+      progressDetail,
       generatedImages,
       previewVisible,
       previewImage,
@@ -819,6 +931,7 @@ export default {
       fetchAvailableModels,
       fetchAvailableSamplers,
       estimatedCost,
+      estimatedCredits,
       estimatedTime,
       formatCfgTooltip,
       formatStepsTooltip,
@@ -833,6 +946,7 @@ export default {
       updateTags,
       useAsReference,
       formatTime,
+      startFallbackProgress,
       // 图片处理工具
       getFullImageUrl,
       handleImageError
@@ -990,6 +1104,29 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+}
+
+.balance-info {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.balance-info.insufficient {
+  color: #F56C6C;
+  background: rgba(245, 108, 108, 0.1);
+  border: 1px solid rgba(245, 108, 108, 0.2);
+}
+
+.insufficient-text {
+  color: #F56C6C;
+  font-weight: 600;
+  font-size: 0.8rem;
 }
 
 /* 右侧结果面板 */

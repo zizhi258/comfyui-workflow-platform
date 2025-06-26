@@ -29,7 +29,8 @@ class ComfyUIService {
         seed = -1,
         sampler, // 必须由前端提供，不设默认值
         clipSkip = 2,
-        type = 'text2img'
+        type = 'text2img',
+        frontendTaskId // 前端提供的taskId
       } = params;
 
       // 验证必要参数
@@ -86,8 +87,8 @@ class ComfyUIService {
 
       const promptId = promptResponse.prompt_id;
 
-      // 监听任务执行
-      const result = await this.waitForCompletion(promptId);
+      // 监听任务执行，传递frontendTaskId用于进度转发
+      const result = await this.waitForCompletion(promptId, frontendTaskId);
       
       console.log('准备返回ComfyUI结果:', {
         promptId,
@@ -250,10 +251,11 @@ class ComfyUIService {
 
   /**
    * 等待任务完成
-   * @param {string} promptId - 任务ID
+   * @param {string} promptId - ComfyUI任务ID
+   * @param {string} frontendTaskId - 前端任务ID，用于进度转发
    * @returns {Promise<Object>} 完成结果
    */
-  async waitForCompletion(promptId) {
+  async waitForCompletion(promptId, frontendTaskId) {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(`${this.comfyuiUrl.replace('http', 'ws')}/ws?clientId=${this.clientId}`);
       const timeout = setTimeout(() => {
@@ -296,6 +298,10 @@ class ComfyUIService {
           if (message.type === 'executing' && message.data.node === null) {
             // 任务完成
             console.log('任务执行完成，开始获取图片');
+            
+            // 发送完成消息给前端
+            this.forwardCompletionToFrontend(frontendTaskId || promptId);
+            
             clearTimeout(timeout);
             ws.close();
             
@@ -311,9 +317,16 @@ class ComfyUIService {
             reject(new Error(`执行错误: ${JSON.stringify(message.data)}`));
           }
           
-          // 记录进度信息
+          // 记录进度信息并转发给前端
           if (message.type === 'progress') {
-            console.log('生成进度:', message.data);
+            console.log('🎯 收到ComfyUI进度消息:', JSON.stringify(message.data, null, 2));
+            // 使用frontendTaskId转发进度
+            this.forwardProgressToFrontend(frontendTaskId || promptId, message.data);
+          }
+          
+          // 记录其他类型的消息用于调试
+          if (message.type === 'executing') {
+            console.log('⚙️ ComfyUI执行状态:', message.data);
           }
           
         } catch (error) {
@@ -521,6 +534,114 @@ class ComfyUIService {
         console.log('提示: ComfyUI服务可能未启动，请运行: python main.py --listen 127.0.0.1 --port 8188');
       }
       return false;
+    }
+  }
+
+  /**
+   * 转发进度信息给前端
+   * @param {string} promptId - 任务ID
+   * @param {Object} progressData - 进度数据
+   */
+  forwardProgressToFrontend(promptId, progressData) {
+    try {
+      console.log(`🔄 尝试转发进度 - taskId: ${promptId}`);
+      console.log(`📊 原始进度数据:`, progressData);
+      console.log(`🔗 活跃连接数: ${global.wsConnections ? global.wsConnections.size : 0}`);
+      
+      // 检查是否有客户端订阅了这个任务的进度
+      if (global.wsConnections && global.wsConnections.has(promptId)) {
+        const clientWs = global.wsConnections.get(promptId);
+        console.log(`✅ 找到订阅客户端，连接状态: ${clientWs.readyState}`);
+        
+        // 检查连接是否仍然活跃
+        if (clientWs.readyState === clientWs.OPEN) {
+          // 计算进度百分比 - 兼容不同的数据格式
+          let progressPercent = 0;
+          let step = 0;
+          let totalSteps = 0;
+          let title = '生成中...';
+          
+          // 处理不同的进度数据格式
+          if (progressData.value !== undefined && progressData.max !== undefined) {
+            step = progressData.value;
+            totalSteps = progressData.max;
+            if (totalSteps > 0) {
+              progressPercent = Math.round((step / totalSteps) * 100);
+            }
+          } else if (progressData.progress !== undefined) {
+            // 某些版本可能使用不同的字段名
+            progressPercent = Math.round(progressData.progress * 100);
+          }
+          
+          // 提取标题信息
+          if (progressData.node) {
+            title = `处理节点: ${progressData.node}`;
+          }
+          
+          const progressMessage = {
+            type: 'progress',
+            taskId: promptId,
+            data: {
+              percent: progressPercent,
+              step: step,
+              totalSteps: totalSteps,
+              node: progressData.node || '',
+              title: title,
+              raw: progressData // 保留原始数据
+            },
+            timestamp: new Date().toISOString()
+          };
+          
+          clientWs.send(JSON.stringify(progressMessage));
+          console.log(`📤 进度已转发给前端: ${progressPercent}% (${step}/${totalSteps}) - ${title}`);
+        } else {
+          // 清理无效连接
+          global.wsConnections.delete(promptId);
+          console.log(`🗑️ 清理无效的WebSocket连接: ${promptId}`);
+        }
+      } else {
+        console.log(`❌ 未找到taskId的订阅客户端: ${promptId}`);
+        if (global.wsConnections) {
+          console.log(`🔍 当前活跃的订阅:`, Array.from(global.wsConnections.keys()));
+        }
+      }
+    } catch (error) {
+      console.error('❌ 转发进度信息失败:', error);
+    }
+  }
+
+  /**
+   * 转发任务完成消息给前端
+   * @param {string} promptId - 任务ID
+   */
+  forwardCompletionToFrontend(promptId) {
+    try {
+      console.log(`✅ 发送完成消息 - taskId: ${promptId}`);
+      
+      if (global.wsConnections && global.wsConnections.has(promptId)) {
+        const clientWs = global.wsConnections.get(promptId);
+        
+        if (clientWs.readyState === clientWs.OPEN) {
+          const completionMessage = {
+            type: 'progress',
+            taskId: promptId,
+            data: {
+              percent: 100,
+              completed: true,
+              title: '生成完成'
+            },
+            timestamp: new Date().toISOString()
+          };
+          
+          clientWs.send(JSON.stringify(completionMessage));
+          console.log(`📤 完成消息已发送给前端: ${promptId}`);
+          
+          // 清理连接
+          global.wsConnections.delete(promptId);
+        }
+      }
+    } catch (error) {
+      console.error('❌ 转发完成消息失败:', error);
     }
   }
 }

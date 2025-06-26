@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { userAPI } from '../utils/api'
+import { userAPI, creditAPI } from '../utils/api'
 import { TOKEN_KEY } from '../config'
 
 export const useUserStore = defineStore('user', {
@@ -12,7 +12,8 @@ export const useUserStore = defineStore('user', {
 
   getters: {
     isLoggedIn: (state) => !!state.token,
-    userName: (state) => state.user?.username || ''
+    userName: (state) => state.user?.username || '',
+    userCredits: (state) => state.user?.credits || 0
   },
 
   actions: {
@@ -65,6 +66,25 @@ export const useUserStore = defineStore('user', {
       this.token = null
       this.error = null
       localStorage.removeItem(TOKEN_KEY)
+    },
+
+    async refreshCredits() {
+      if (!this.token) return
+      
+      try {
+        const response = await creditAPI.getCredits()
+        if (this.user) {
+          this.user.credits = response.data.credits
+        }
+      } catch (error) {
+        console.error('刷新积分信息失败:', error)
+      }
+    },
+
+    updateCredits(newCredits) {
+      if (this.user) {
+        this.user.credits = newCredits
+      }
     }
   }
 })

@@ -63,9 +63,64 @@ const startServer = async () => {
       console.log("数据库连接正常，使用现有表结构。");
     }
 
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`服务器正在 http://localhost:${PORT} 上运行`);
     });
+
+    // 添加WebSocket服务器用于实时进度推送
+    const WebSocket = require('ws');
+    const wss = new WebSocket.Server({ server });
+    
+    // 存储活跃的WebSocket连接
+    global.wsConnections = new Map();
+    
+    wss.on('connection', (ws, req) => {
+      console.log('新的WebSocket连接已建立');
+      
+      ws.on('message', (message) => {
+        try {
+          const data = JSON.parse(message);
+          
+          if (data.type === 'subscribe' && data.taskId) {
+            // 客户端订阅特定任务的进度更新
+            global.wsConnections.set(data.taskId, ws);
+            console.log(`客户端订阅任务进度: ${data.taskId}`);
+            
+            ws.send(JSON.stringify({
+              type: 'subscribed',
+              taskId: data.taskId,
+              message: '已订阅进度更新'
+            }));
+          } else if (data.type === 'ping') {
+            // 处理ping消息
+            console.log('收到WebSocket ping:', data.message);
+            ws.send(JSON.stringify({
+              type: 'pong',
+              message: 'WebSocket连接正常'
+            }));
+          }
+        } catch (error) {
+          console.error('WebSocket消息解析错误:', error);
+        }
+      });
+      
+      ws.on('close', () => {
+        // 清理断开的连接
+        for (const [taskId, connection] of global.wsConnections.entries()) {
+          if (connection === ws) {
+            global.wsConnections.delete(taskId);
+            console.log(`WebSocket连接断开，移除任务订阅: ${taskId}`);
+            break;
+          }
+        }
+      });
+      
+      ws.on('error', (error) => {
+        console.error('WebSocket错误:', error);
+      });
+    });
+    
+    console.log('WebSocket服务器已启动，支持实时进度推送');
   } catch (error) {
     console.error('启动服务器失败:', error);
     process.exit(1);

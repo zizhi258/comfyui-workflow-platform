@@ -46,6 +46,12 @@
               <el-icon><Menu /></el-icon>
             </el-button>
             
+            <!-- 积分显示 -->
+            <div class="credits-display">
+              <el-icon class="credits-icon"><Coin /></el-icon>
+              <span class="credits-amount">{{ userStore.userCredits }}</span>
+            </div>
+            
             <el-dropdown @command="handleCommand" class="user-dropdown">
               <span class="user-info">
                 <el-avatar :size="32" :src="userAvatar">
@@ -165,7 +171,8 @@ import {
   Setting,
   SwitchButton,
   ArrowDown,
-  Menu
+  Menu,
+  Coin
 } from '@element-plus/icons-vue'
 
 export default {
@@ -179,7 +186,8 @@ export default {
     Setting,
     SwitchButton,
     ArrowDown,
-    Menu
+    Menu,
+    Coin
   },
   setup() {
     const router = useRouter()
@@ -557,5 +565,46 @@ export default {
 
 .mobile-menu-footer .el-button .el-icon {
   margin-right: 0.8rem;
+}
+
+/* 积分显示样式 */
+.credits-display {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.8rem;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border-radius: 20px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+  transition: all 0.3s ease;
+}
+
+.credits-display:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+.credits-icon {
+  font-size: 16px;
+  color: #FFF;
+}
+
+.credits-amount {
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .credits-display {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .credits-icon {
+    font-size: 14px;
+  }
 }
 </style>

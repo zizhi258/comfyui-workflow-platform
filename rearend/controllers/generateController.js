@@ -3,6 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const WebSocket = require('ws');
 const ComfyUIService = require('../services/comfyuiService');
+const CreditService = require('../services/creditService');
 const fileManager = require('../utils/fileManager');
 
 // AIGC图片生成 - 集成ComfyUI
@@ -18,7 +19,8 @@ const generateImage = async (req, res) => {
       steps = 25,
       seed = -1,
       sampler, // 必须由前端提供
-      clipSkip = 2
+      clipSkip = 2,
+      frontendTaskId // 前端提供的taskId
     } = req.body;
 
     // 验证必要参数
@@ -44,6 +46,37 @@ const generateImage = async (req, res) => {
     }
 
     console.log('收到生成请求参数:', { model, sampler, prompt: prompt.substring(0, 50) + '...' });
+
+    // === 积分系统验证 ===
+    const GENERATION_COST = 15; // 每次生成消耗15积分
+    const totalCostCredits = GENERATION_COST * batchSize; // 根据批次计算总消耗
+    
+    console.log(`💰 积分消耗计算: ${GENERATION_COST} × ${batchSize} = ${totalCostCredits} 积分`);
+    
+    // 检查用户积分余额
+    try {
+      const userCredits = await CreditService.getUserCredits(req.user.id);
+      console.log(`👤 用户当前积分: ${userCredits}`);
+      
+      if (userCredits < totalCostCredits) {
+        return res.status(402).json({ // 402 Payment Required
+          success: false,
+          message: `积分不足，当前余额: ${userCredits}，需要: ${totalCostCredits}`,
+          errorCode: 'INSUFFICIENT_CREDITS',
+          data: {
+            currentCredits: userCredits,
+            requiredCredits: totalCostCredits,
+            shortfall: totalCostCredits - userCredits
+          }
+        });
+      }
+    } catch (error) {
+      console.error('检查积分失败:', error);
+      return res.status(500).json({
+        success: false,
+        message: '积分系统错误，请稍后重试'
+      });
+    }
 
     // 验证参数范围
     if (batchSize < 1 || batchSize > 4) {
@@ -79,6 +112,10 @@ const generateImage = async (req, res) => {
     const batchCost = (batchSize - 1) * 8;
     const totalCost = baseCost + sizeCost + batchCost;
 
+    // 使用前端提供的taskId或生成新的
+    const taskId = frontendTaskId || `task_${Date.now()}`;
+    console.log('使用的taskId:', taskId);
+
     // 生成配置对象
     const generationConfig = {
       prompt: prompt.trim(),
@@ -94,7 +131,8 @@ const generateImage = async (req, res) => {
       userId: req.user.id,
       createdAt: new Date(),
       estimatedTime,
-      cost: totalCost
+      cost: totalCost,
+      taskId: taskId
     };
 
     // 初始化ComfyUI服务
@@ -109,7 +147,7 @@ const generateImage = async (req, res) => {
       console.log('   python main.py --listen 127.0.0.1 --port 8188');
       
       // 如果ComfyUI不可用，回退到模拟生成
-      return generateMockImages(generationConfig, totalCost, estimatedTime, res);
+      return await generateMockImages(generationConfig, totalCost, estimatedTime, res, req.user.id, totalCostCredits, taskId);
     }
 
     // 调用ComfyUI生成图片 - 直接使用前端传来的模型和采样器名称
@@ -124,13 +162,14 @@ const generateImage = async (req, res) => {
       seed: generationConfig.seed,
       sampler: generationConfig.sampler, // 直接使用前端传来的真实采样器名称
       clipSkip: generationConfig.clipSkip,
-      type: 'text2img'
+      type: 'text2img',
+      frontendTaskId: taskId // 传递taskId给ComfyUI服务
     });
 
     if (!result.success) {
       console.error('ComfyUI生成失败，使用模拟生成:', result.error);
       // 如果生成失败，回退到模拟生成
-      return generateMockImages(generationConfig, totalCost, estimatedTime, res);
+      return await generateMockImages(generationConfig, totalCost, estimatedTime, res, req.user.id, totalCostCredits, taskId);
     }
 
     console.log('ComfyUI生成成功，处理返回数据:', result);
@@ -183,15 +222,35 @@ const generateImage = async (req, res) => {
 
     console.log('处理后的图片数据:', processedImages);
 
+    // === 生成成功，扣除积分 ===
+    let creditTransactionResult = null;
+    try {
+      creditTransactionResult = await CreditService.spendCredits(
+        req.user.id,
+        totalCostCredits,
+        `AI图片生成 - ${batchSize}张图片`,
+        taskId,
+        'image_generation'
+      );
+      
+      console.log(`✅ 积分扣除成功: -${totalCostCredits} (余额: ${creditTransactionResult.balance_after})`);
+    } catch (creditError) {
+      console.error('扣除积分失败:', creditError);
+      // 积分扣除失败，但不影响图片生成结果的返回
+      // 可以考虑记录日志或发送通知给管理员
+    }
+
     // 返回生成结果
     const responseData = {
       success: true,
       message: '图片生成成功',
       data: {
-        taskId: result.data.promptId || `task_${Date.now()}`,
+        taskId: taskId, // 使用前端提供的taskId
         images: processedImages,
         config: generationConfig,
-        cost: totalCost,
+        cost: totalCost, // 保留原有的cost字段（可能用于其他地方）
+        creditsUsed: totalCostCredits, // 新增：积分消耗
+        creditsRemaining: creditTransactionResult?.balance_after || null, // 新增：剩余积分
         estimatedTime: estimatedTime,
         actualTime: Math.floor(estimatedTime * (0.8 + Math.random() * 0.4)),
         batchSize: batchSize,
@@ -239,7 +298,7 @@ const getGenerationStatus = async (req, res) => {
 };
 
 // 模拟图片生成（回退方案）
-const generateMockImages = (generationConfig, totalCost, estimatedTime, res) => {
+const generateMockImages = async (generationConfig, totalCost, estimatedTime, res, userId, totalCostCredits, taskId) => {
   const generatedImages = [];
   for (let i = 0; i < generationConfig.batchSize; i++) {
     const imageSeed = generationConfig.seed + i;
@@ -250,19 +309,39 @@ const generateMockImages = (generationConfig, totalCost, estimatedTime, res) => 
       config: generationConfig,
       createdAt: new Date(),
       size: generationConfig.size,
-      format: 'png'
+      format: 'png',
+      storageType: 'mock'
     };
     generatedImages.push(imageData);
+  }
+
+  // === 模拟生成也要扣除积分 ===
+  let creditTransactionResult = null;
+  try {
+    creditTransactionResult = await CreditService.spendCredits(
+      userId,
+      totalCostCredits,
+      `AI图片生成(模拟) - ${generationConfig.batchSize}张图片`,
+      taskId,
+      'image_generation_mock'
+    );
+    
+    console.log(`✅ 模拟生成积分扣除成功: -${totalCostCredits} (余额: ${creditTransactionResult.balance_after})`);
+  } catch (creditError) {
+    console.error('模拟生成扣除积分失败:', creditError);
+    // 积分扣除失败，但不影响模拟生成结果的返回
   }
 
   return res.json({
     success: true,
     message: '图片生成成功（模拟）',
     data: {
-      taskId: `task_${Date.now()}`,
+      taskId: taskId,
       images: generatedImages,
       config: generationConfig,
       cost: totalCost,
+      creditsUsed: totalCostCredits, // 新增：积分消耗
+      creditsRemaining: creditTransactionResult?.balance_after || null, // 新增：剩余积分
       estimatedTime: estimatedTime,
       actualTime: Math.floor(estimatedTime * (0.8 + Math.random() * 0.4)),
       batchSize: generationConfig.batchSize,

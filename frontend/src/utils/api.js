@@ -70,9 +70,22 @@ export const worksAPI = {
   deleteWork: (id) => api.delete(`/works/${id}`),
   // 点赞/取消点赞作品
   toggleWorkLike: (id) => api.post(`/works/${id}/like`),
+  // 增加作品浏览量
+  incrementWorkView: (id) => api.post(`/works/${id}/view`),
   // 获取用户统计信息
   getUserStats: () => api.get('/works/stats')
 }
 
+// 积分系统API
+export const creditAPI = {
+  // 获取积分余额
+  getCredits: () => api.get('/users/credits'),
+  
+  // 获取积分统计
+  getCreditStats: () => api.get('/users/credits/stats'),
+  
+  // 获取积分交易记录
+  getTransactions: (params = {}) => api.get('/users/credits/transactions', { params })
+}
 
 export default api

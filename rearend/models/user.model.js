@@ -45,6 +45,27 @@ const User = sequelize.define('user', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  // --- 积分系统字段 ---
+  credits: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 500, // 新用户默认500积分
+    validate: {
+      min: 0 // 积分不能为负数
+    }
+  },
+  total_earned_credits: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 500, // 记录总获得积分
+    field: 'total_earned_credits'
+  },
+  total_spent_credits: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0, // 记录总消费积分
+    field: 'total_spent_credits'
+  },
   // --- 现有字段 ---
   last_login: {
     type: DataTypes.DATE,
@@ -91,6 +112,12 @@ User.associate = (models) => {
   User.hasMany(models.WorkView, {
     foreignKey: 'userId',
     as: 'viewRecords'
+  });
+  
+  // 用户有多个积分交易记录
+  User.hasMany(models.CreditTransaction, {
+    foreignKey: 'userId',
+    as: 'creditTransactions'
   });
 };
 
