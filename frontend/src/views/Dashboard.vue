@@ -5,7 +5,7 @@
       <div class="banner-content">
         <div class="welcome-text">
           <h1 class="welcome-title">
-            欢迎回来，{{ userStore.userName || '创作者' }}！
+            欢迎回来，{{ userStore.userName || "创作者" }}！
           </h1>
           <p class="welcome-subtitle">
             在创想引擎中释放你的创意，用AI重新定义视觉创作
@@ -94,17 +94,23 @@
             <template #template>
               <div class="skeleton-works">
                 <div v-for="i in 6" :key="i" class="skeleton-work-item">
-                  <el-skeleton-item variant="image" style="height: 200px; border-radius: 8px;" />
-                  <div style="padding: 1rem 0;">
-                    <el-skeleton-item variant="h3" style="width: 60%;" />
-                    <el-skeleton-item variant="text" style="width: 40%; margin-top: 0.5rem;" />
+                  <el-skeleton-item
+                    variant="image"
+                    style="height: 200px; border-radius: 8px"
+                  />
+                  <div style="padding: 1rem 0">
+                    <el-skeleton-item variant="h3" style="width: 60%" />
+                    <el-skeleton-item
+                      variant="text"
+                      style="width: 40%; margin-top: 0.5rem"
+                    />
                   </div>
                 </div>
               </div>
             </template>
           </el-skeleton>
         </div>
-        
+
         <!-- 作品列表 -->
         <div
           v-else-if="recentWorks.length > 0"
@@ -113,8 +119,8 @@
           class="work-item"
         >
           <div class="work-image">
-            <img 
-              :src="work.thumbnail" 
+            <img
+              :src="work.thumbnail"
               :alt="work.title"
               @error="handleImageError"
             />
@@ -129,13 +135,10 @@
             <p class="work-time">{{ formatTime(work.createdAt) }}</p>
           </div>
         </div>
-        
+
         <!-- 空状态 -->
         <div v-if="recentWorks.length === 0" class="empty-works">
-          <el-empty 
-            description="还没有创作作品"
-            :image-size="120"
-          >
+          <el-empty description="还没有创作作品" :image-size="120">
             <el-button type="primary" @click="startCreating">
               开始第一个创作
             </el-button>
@@ -189,12 +192,12 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user'
-import { worksAPI } from '../utils/api'
-import { getFullImageUrl, handleImageError } from '../utils/imageUtils'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useUserStore } from "../stores/user";
+import { worksAPI } from "../utils/api";
+import { getFullImageUrl, handleImageError } from "../utils/imageUtils";
+import { ElMessage } from "element-plus";
 import {
   MagicStick,
   Picture,
@@ -207,11 +210,11 @@ import {
   Brush,
   Camera,
   DocumentCopy,
-  Setting
-} from '@element-plus/icons-vue'
+  Setting,
+} from "@element-plus/icons-vue";
 
 export default {
-  name: 'Dashboard',
+  name: "Dashboard",
   components: {
     MagicStick,
     Picture,
@@ -224,94 +227,94 @@ export default {
     Brush,
     Camera,
     DocumentCopy,
-    Setting
+    Setting,
   },
   setup() {
-    const router = useRouter()
-    const userStore = useUserStore()
+    const router = useRouter();
+    const userStore = useUserStore();
 
     // 功能卡片数据
     const features = ref([
       {
         id: 1,
-        title: 'AI绘画生成',
-        description: '通过文字描述生成高质量AI艺术作品，支持多种艺术风格',
-        icon: 'Brush',
-        route: '/create/paint',
-        tags: ['文生图', '艺术风格', '高清输出']
+        title: "AI绘画生成",
+        description: "通过文字描述生成高质量AI艺术作品，支持多种艺术风格",
+        icon: "Brush",
+        route: "/create/paint",
+        tags: ["文生图", "艺术风格", "高清输出"],
       },
       {
         id: 2,
-        title: '图像增强',
-        description: '一键提升图片分辨率和质量，让模糊图片重获新生',
-        icon: 'Picture',
-        route: '/create/enhance',
-        tags: ['超分辨率', '去噪', '细节恢复']
+        title: "图像增强",
+        description: "一键提升图片分辨率和质量，让模糊图片重获新生",
+        icon: "Picture",
+        route: "/create/enhance",
+        tags: ["超分辨率", "去噪", "细节恢复"],
       },
       {
         id: 3,
-        title: '风格转换',
-        description: '将普通照片转换为各种艺术风格，如油画、素描等',
-        icon: 'Camera',
-        route: '/create/style-transfer',
-        tags: ['风格迁移', '艺术化', '个性定制']
+        title: "风格转换",
+        description: "将普通照片转换为各种艺术风格，如油画、素描等",
+        icon: "Camera",
+        route: "/create/style-transfer",
+        tags: ["风格迁移", "艺术化", "个性定制"],
       },
       {
         id: 4,
-        title: '批量处理',
-        description: '批量处理多张图片，提高工作效率',
-        icon: 'DocumentCopy',
-        route: '/create/batch',
-        tags: ['批量操作', '效率工具', '自动化']
-      }
-    ])
+        title: "批量处理",
+        description: "批量处理多张图片，提高工作效率",
+        icon: "DocumentCopy",
+        route: "/create/batch",
+        tags: ["批量操作", "效率工具", "自动化"],
+      },
+    ]);
 
     // 最近作品数据
-    const recentWorks = ref([])
-    const loadingRecentWorks = ref(false)
+    const recentWorks = ref([]);
+    const loadingRecentWorks = ref(false);
 
     // 统计数据
     const stats = reactive({
       totalWorks: 23,
       timesSaved: 156,
       satisfaction: 95,
-      improvement: 78
-    })
+      improvement: 78,
+    });
 
     // 方法
     const startCreating = () => {
-      router.push('/create')
-    }
+      router.push("/create");
+    };
 
     const viewGallery = () => {
-      router.push('/gallery')
-    }
+      router.push("/gallery");
+    };
 
     const navigateToFeature = (route) => {
-      router.push(route)
-    }
+      router.push(route);
+    };
 
     const viewAllWorks = () => {
-      router.push('/my-works')
-    }
+      router.push("/my-works");
+    };
 
     const formatTime = (time) => {
-      return new Date(time).toLocaleDateString('zh-CN')
-    }
+      return new Date(time).toLocaleDateString("zh-CN");
+    };
 
     // 获取最近作品
     const fetchRecentWorks = async () => {
       try {
-        loadingRecentWorks.value = true
+        loadingRecentWorks.value = true;
         const response = await worksAPI.getUserWorks({
           page: 1,
           limit: 6,
-          sort: 'created_at',
-          order: 'DESC'
-        })
-        
+          sort: "created_at",
+          order: "DESC",
+        });
+
         if (response.success) {
-          recentWorks.value = response.data.works.map(work => ({
+          recentWorks.value = response.data.works.map((work) => ({
             id: work.id,
             title: work.title,
             thumbnail: getFullImageUrl(work.thumbnailUrl || work.imageUrl),
@@ -319,33 +322,33 @@ export default {
             createdAt: work.createdAt,
             views: work.views,
             likes: work.likes,
-            isPublic: work.isPublic
-          }))
-          
+            isPublic: work.isPublic,
+          }));
+
           // 更新统计数据
-          stats.totalWorks = response.data.pagination?.totalCount || 0
+          stats.totalWorks = response.data.pagination?.totalCount || 0;
         }
       } catch (error) {
-        console.error('获取最近作品失败:', error)
+        console.error("获取最近作品失败:", error);
         // 静默失败，不显示错误消息，避免影响用户体验
       } finally {
-        loadingRecentWorks.value = false
+        loadingRecentWorks.value = false;
       }
-    }
+    };
 
     // 获取用户数据
     const fetchUserData = async () => {
       try {
-        await userStore.getProfile()
+        await userStore.getProfile();
       } catch (error) {
-        console.error('获取用户信息失败:', error)
+        console.error("获取用户信息失败:", error);
       }
-    }
+    };
 
     onMounted(() => {
-      fetchUserData()
-      fetchRecentWorks()
-    })
+      fetchUserData();
+      fetchRecentWorks();
+    });
 
     return {
       userStore,
@@ -360,29 +363,35 @@ export default {
       fetchRecentWorks,
       formatTime,
       getFullImageUrl,
-      handleImageError
-    }
-  }
-}
+      handleImageError,
+    };
+  },
+};
 </script>
 
 <style scoped>
 .dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-primary);
   padding: 2rem;
 }
 
 /* 欢迎横幅 */
 .welcome-banner {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
   padding: 3rem;
   margin-bottom: 2rem;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-slow);
+}
+
+.welcome-banner:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
 }
 
 .banner-content {
@@ -396,16 +405,16 @@ export default {
 .welcome-title {
   font-size: 2.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
+  letter-spacing: -0.025em;
 }
 
 .welcome-subtitle {
   font-size: 1.1rem;
   color: var(--text-secondary);
   margin-bottom: 0;
+  line-height: 1.5;
 }
 
 .quick-actions {
@@ -413,13 +422,21 @@ export default {
   gap: 1rem;
 }
 
-.create-btn, .gallery-btn {
+.create-btn,
+.gallery-btn {
   padding: 12px 24px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  transition: all var(--transition-normal);
+}
+
+.create-btn:hover,
+.gallery-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 /* 浮动装饰 */
@@ -439,13 +456,30 @@ export default {
   animation: float 6s ease-in-out infinite;
 }
 
-.icon-1 { top: 20%; right: 15%; animation-delay: 0s; }
-.icon-2 { top: 60%; right: 8%; animation-delay: 2s; }
-.icon-3 { top: 40%; right: 25%; animation-delay: 4s; }
+.icon-1 {
+  top: 20%;
+  right: 15%;
+  animation-delay: 0s;
+}
+.icon-2 {
+  top: 60%;
+  right: 8%;
+  animation-delay: 2s;
+}
+.icon-3 {
+  top: 40%;
+  right: 25%;
+  animation-delay: 4s;
+}
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
 }
 
 /* 功能卡片区域 */
@@ -455,10 +489,11 @@ export default {
 
 .section-title {
   font-size: 1.8rem;
-  font-weight: 600;
-  color: white;
+  font-weight: 700;
+  color: var(--text-primary);
   margin-bottom: 1.5rem;
   text-align: center;
+  letter-spacing: -0.025em;
 }
 
 .features-grid {
@@ -468,18 +503,20 @@ export default {
 }
 
 .feature-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
   padding: 2rem;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
+  transition: all var(--transition-slow);
+  box-shadow: var(--shadow-sm);
 }
 
 .feature-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary-color);
 }
 
 .feature-icon {
@@ -492,6 +529,7 @@ export default {
   font-weight: 600;
   margin-bottom: 0.8rem;
   color: var(--text-primary);
+  letter-spacing: -0.025em;
 }
 
 .feature-description {
@@ -508,7 +546,7 @@ export default {
 }
 
 .feature-tag {
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
 }
 
 /* 最近作品区域 */
@@ -530,14 +568,17 @@ export default {
 }
 
 .work-item {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  transition: transform 0.3s ease;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-sm);
 }
 
 .work-item:hover {
   transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
 }
 
 .work-image {
@@ -587,9 +628,11 @@ export default {
 
 .empty-works {
   grid-column: 1 / -1;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
   padding: 2rem;
+  box-shadow: var(--shadow-sm);
 }
 
 /* 统计信息区域 */
@@ -604,17 +647,20 @@ export default {
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: transform 0.3s ease;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-number {
@@ -637,10 +683,12 @@ export default {
 }
 
 .skeleton-work-item {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   padding: 0 0 1rem 0;
+  box-shadow: var(--shadow-sm);
 }
 
 /* 空状态样式 */
@@ -655,25 +703,25 @@ export default {
   .dashboard {
     padding: 1rem;
   }
-  
+
   .welcome-banner {
     padding: 2rem;
   }
-  
+
   .banner-content {
     flex-direction: column;
     text-align: center;
     gap: 2rem;
   }
-  
+
   .welcome-title {
     font-size: 2rem;
   }
-  
+
   .features-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -683,13 +731,14 @@ export default {
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .quick-actions {
     flex-direction: column;
     width: 100%;
   }
-  
-  .create-btn, .gallery-btn {
+
+  .create-btn,
+  .gallery-btn {
     width: 100%;
     justify-content: center;
   }

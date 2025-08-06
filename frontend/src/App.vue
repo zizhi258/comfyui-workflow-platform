@@ -9,7 +9,7 @@
             </el-icon>
             <h2>AIGC创意工作流平台</h2>
           </div>
-          
+
           <!-- 已登录用户导航 -->
           <div v-if="userStore.isLoggedIn" class="nav-links">
             <!-- 桌面端菜单 -->
@@ -36,28 +36,28 @@
                 <span>我的作品</span>
               </el-menu-item>
             </el-menu>
-            
+
             <!-- 移动端菜单按钮 -->
-            <el-button 
+            <el-button
               class="mobile-menu-btn"
               circle
               @click="showMobileMenu = true"
             >
               <el-icon><Menu /></el-icon>
             </el-button>
-            
+
             <!-- 积分显示 -->
             <div class="credits-display">
               <el-icon class="credits-icon"><Coin /></el-icon>
               <span class="credits-amount">{{ userStore.userCredits }}</span>
             </div>
-            
+
             <el-dropdown @command="handleCommand" class="user-dropdown">
               <span class="user-info">
                 <el-avatar :size="32" :src="userAvatar">
                   <el-icon><User /></el-icon>
                 </el-avatar>
-                <span class="username">{{ userStore.userName || '用户' }}</span>
+                <span class="username">{{ userStore.userName || "用户" }}</span>
                 <el-icon class="arrow-down"><ArrowDown /></el-icon>
               </span>
               <template #dropdown>
@@ -78,7 +78,7 @@
               </template>
             </el-dropdown>
           </div>
-          
+
           <!-- 未登录用户导航 -->
           <div v-else class="nav-links">
             <router-link to="/login" class="nav-link">
@@ -90,12 +90,12 @@
           </div>
         </div>
       </el-header>
-      
+
       <el-main class="main-content">
         <router-view />
       </el-main>
     </el-container>
-    
+
     <!-- 移动端抽屉菜单 -->
     <el-drawer
       v-model="showMobileMenu"
@@ -110,11 +110,11 @@
             <el-icon><User /></el-icon>
           </el-avatar>
           <div class="mobile-user-details">
-            <h4>{{ userStore.userName || '用户' }}</h4>
+            <h4>{{ userStore.userName || "用户" }}</h4>
             <p>欢迎回来</p>
           </div>
         </div>
-        
+
         <el-menu
           :default-active="activeIndex"
           class="mobile-menu"
@@ -137,7 +137,7 @@
             <span>我的作品</span>
           </el-menu-item>
         </el-menu>
-        
+
         <div class="mobile-menu-footer">
           <el-button @click="handleCommand('profile')" text>
             <el-icon><User /></el-icon>
@@ -158,10 +158,10 @@
 </template>
 
 <script>
-import { computed, watch, ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useUserStore } from './stores/user'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, watch, ref } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useUserStore } from "./stores/user";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   MagicStick,
   House,
@@ -172,11 +172,11 @@ import {
   SwitchButton,
   ArrowDown,
   Menu,
-  Coin
-} from '@element-plus/icons-vue'
+  Coin,
+} from "@element-plus/icons-vue";
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
     MagicStick,
     House,
@@ -187,74 +187,78 @@ export default {
     SwitchButton,
     ArrowDown,
     Menu,
-    Coin
+    Coin,
   },
   setup() {
-    const router = useRouter()
-    const route = useRoute()
-    const userStore = useUserStore()
-    
-    const showMobileMenu = ref(false)
+    const router = useRouter();
+    const route = useRoute();
+    const userStore = useUserStore();
+
+    const showMobileMenu = ref(false);
 
     const activeIndex = computed(() => {
-      return route.path
-    })
+      return route.path;
+    });
 
     const userAvatar = computed(() => {
       // 可以从用户信息中获取头像URL
-      return null // 暂时返回null，使用默认头像
-    })
+      return null; // 暂时返回null，使用默认头像
+    });
 
     const goHome = () => {
       if (userStore.isLoggedIn) {
-        router.push('/dashboard')
+        router.push("/dashboard");
       } else {
-        router.push('/login')
+        router.push("/login");
       }
-    }
+    };
 
     const handleMenuSelect = (index) => {
-      router.push(index)
-    }
-    
+      router.push(index);
+    };
+
     const handleMobileMenuSelect = (index) => {
-      router.push(index)
-      showMobileMenu.value = false
-    }
+      router.push(index);
+      showMobileMenu.value = false;
+    };
 
     const handleCommand = async (command) => {
       switch (command) {
-        case 'profile':
-          router.push('/profile')
-          break
-        case 'settings':
-          ElMessage.info('设置功能开发中...')
-          break
-        case 'logout':
+        case "profile":
+          router.push("/profile");
+          break;
+        case "settings":
+          ElMessage.info("设置功能开发中...");
+          break;
+        case "logout":
           try {
-            await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-              confirmButtonText: '确定',
-              cancelButtonText: '取消',
-              type: 'warning'
-            })
-            
-            userStore.logout()
-            ElMessage.success('已退出登录')
-            router.push('/login')
-            showMobileMenu.value = false
+            await ElMessageBox.confirm("确定要退出登录吗？", "提示", {
+              confirmButtonText: "确定",
+              cancelButtonText: "取消",
+              type: "warning",
+            });
+
+            userStore.logout();
+            ElMessage.success("已退出登录");
+            router.push("/login");
+            showMobileMenu.value = false;
           } catch {
             // 用户取消操作
           }
-          break
+          break;
       }
-    }
+    };
 
     // 监听路由变化，确保用户信息是最新的
-    watch(() => route.path, () => {
-      if (userStore.isLoggedIn && !userStore.user) {
-        userStore.getProfile()
-      }
-    }, { immediate: true })
+    watch(
+      () => route.path,
+      () => {
+        if (userStore.isLoggedIn && !userStore.user) {
+          userStore.getProfile();
+        }
+      },
+      { immediate: true }
+    );
 
     return {
       userStore,
@@ -264,19 +268,20 @@ export default {
       goHome,
       handleMenuSelect,
       handleMobileMenuSelect,
-      handleCommand
-    }
-  }
-}
+      handleCommand,
+    };
+  },
+};
 </script>
 
 <style scoped>
 .navbar {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
   padding: 0;
+  transition: all var(--transition-normal);
 }
 
 .nav-content {
@@ -292,28 +297,26 @@ export default {
   align-items: center;
   gap: 1rem;
   cursor: pointer;
-  transition: opacity 0.3s ease;
+  transition: all var(--transition-normal);
+  padding: 0.5rem 0;
 }
 
 .nav-brand:hover {
   opacity: 0.8;
+  transform: translateY(-1px);
 }
 
 .brand-icon {
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   color: var(--primary-color);
+  transition: all var(--transition-normal);
 }
 
 .nav-brand h2 {
   margin: 0;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.5rem;
+  letter-spacing: -0.025em;
 }
 
 .nav-links {
@@ -334,22 +337,26 @@ export default {
 
 .nav-menu .el-menu-item {
   border-bottom: 2px solid transparent;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   font-weight: 500;
-  padding: 0 20px;
-  margin: 0 5px;
-  border-radius: 6px 6px 0 0;
-  transition: all 0.3s ease;
+  padding: 0 16px;
+  margin: 0 4px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-normal);
+  height: 40px;
+  line-height: 40px;
 }
 
 .nav-menu .el-menu-item:hover {
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(37, 99, 235, 0.08);
   color: var(--primary-color);
+  transform: translateY(-1px);
 }
 
 .nav-menu .el-menu-item.is-active {
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(37, 99, 235, 0.12);
   color: var(--primary-color);
+  font-weight: 600;
   border-bottom-color: var(--primary-color);
 }
 
@@ -368,12 +375,15 @@ export default {
   gap: 0.8rem;
   padding: 0.5rem 1rem;
   cursor: pointer;
-  border-radius: 20px;
-  transition: background-color 0.3s ease;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-normal);
+  border: 1px solid transparent;
 }
 
 .user-info:hover {
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.2);
+  transform: translateY(-1px);
 }
 
 .username {
@@ -385,7 +395,7 @@ export default {
 .arrow-down {
   color: var(--text-secondary);
   font-size: 12px;
-  transition: transform 0.3s ease;
+  transition: all var(--transition-normal);
 }
 
 .user-dropdown.is-opened .arrow-down {
@@ -407,7 +417,7 @@ export default {
   .nav-menu .el-menu-item span {
     display: none;
   }
-  
+
   .nav-menu .el-menu-item {
     padding: 0 15px;
   }
@@ -417,27 +427,27 @@ export default {
   .nav-content {
     padding: 0 1rem;
   }
-  
+
   .nav-brand h2 {
     font-size: 1.2rem;
   }
-  
+
   .brand-icon {
     display: none;
   }
-  
+
   .desktop-menu {
     display: none;
   }
-  
+
   .mobile-menu-btn {
     display: flex;
   }
-  
+
   .username {
     display: none;
   }
-  
+
   .user-info {
     padding: 0.5rem;
     gap: 0.5rem;
@@ -448,11 +458,11 @@ export default {
   .nav-brand h2 {
     font-size: 1rem;
   }
-  
+
   .nav-links {
     gap: 0.5rem;
   }
-  
+
   .nav-link .el-button {
     padding: 8px 12px;
     font-size: 0.9rem;
@@ -461,21 +471,28 @@ export default {
 
 /* Element Plus 组件样式覆盖 */
 :deep(.el-dropdown-menu) {
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  backdrop-filter: blur(20px);
 }
 
 :deep(.el-dropdown-menu__item) {
-  padding: 8px 16px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  transition: all var(--transition-normal);
+  border-radius: var(--radius-md);
+  margin: 4px 8px;
+  font-weight: 500;
 }
 
 :deep(.el-dropdown-menu__item:hover) {
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(37, 99, 235, 0.08);
   color: var(--primary-color);
+  transform: translateX(2px);
 }
 
 /* 移动端抽屉菜单样式 */
@@ -500,7 +517,11 @@ export default {
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--accent-color)
+  );
   color: white;
 }
 
@@ -534,14 +555,15 @@ export default {
 }
 
 .mobile-menu .el-menu-item:hover {
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(37, 99, 235, 0.08);
   color: var(--primary-color);
 }
 
 .mobile-menu .el-menu-item.is-active {
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(37, 99, 235, 0.12);
   color: var(--primary-color);
   border-right: 3px solid var(--primary-color);
+  font-weight: 600;
 }
 
 .mobile-menu .el-menu-item span {
@@ -571,30 +593,36 @@ export default {
 .credits-display {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.4rem 0.8rem;
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  border-radius: 20px;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--accent-color)
+  );
+  border-radius: var(--radius-lg);
   color: white;
   font-weight: 600;
   font-size: 0.9rem;
-  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
-  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .credits-display:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .credits-icon {
   font-size: 16px;
-  color: #FFF;
+  color: #fff;
 }
 
 .credits-amount {
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.025em;
 }
 
 @media (max-width: 768px) {
@@ -602,7 +630,7 @@ export default {
     padding: 0.3rem 0.6rem;
     font-size: 0.8rem;
   }
-  
+
   .credits-icon {
     font-size: 14px;
   }
